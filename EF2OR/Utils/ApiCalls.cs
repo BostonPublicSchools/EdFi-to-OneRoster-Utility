@@ -16,6 +16,7 @@ using StaffNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Staffs;
 using SchoolsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Schools;
 using SectionsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Sections;
 using StudentsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Students;
+using ParentsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Parents;
 using EF2OR.Entities.EdFiOdsApi;
 using SectionEnrollmentsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.SectionEnrollments;
 
@@ -528,25 +529,28 @@ namespace EF2OR.Utils
         public static async Task<DataResults> GetDataResults(FilterInputs inputs, string oneRosterVersion)
         {
             var dataResults = new DataResults();
-
             if (CommonUtils.ExistingResponses.Count() > 0)
             {
                 CommonUtils.ExistingResponses.Clear(); //reset the global dictionary so we get fresh data
             }
-
-            dataResults.Orgs = await GetCsvOrgs(inputs);
-            dataResults.Users = await GetCsvUsers(inputs);
-            dataResults.Courses = await GetCsvCourses(inputs);
-            dataResults.Classes = await GetCsvClasses(inputs);
+            
+            //dataResults.Orgs = await GetCsvOrgs(inputs);
+            //dataResults.Users = await GetCsvUsers(inputs);
+            //dataResults.Courses = await GetCsvCourses(inputs);
+            //dataResults.Classes = await GetCsvClasses(inputs);
             dataResults.Enrollments = await GetCsvEnrollments(inputs);
-            dataResults.AcademicSessions = await GetCsvAcademicSessions(inputs);
+            //dataResults.AcademicSessions = await GetCsvAcademicSessions(inputs);
+
+            //dataResults.Orgs = new List<CsvOrgs>();
+            //dataResults.Courses = new List<CsvCourses>();
+            //dataResults.Classes = new List<CsvClasses>();
+            //dataResults.Enrollments = new List<CsvEnrollments>();
+            //dataResults.AcademicSessions = new List<CsvAcademicSessions>();
             if (oneRosterVersion == OneRosterVersions.OR_1_1)
             {
                 dataResults.Manifest = GetCsvManifest(DownloadTypes.bulk);
             }
-
             CommonUtils.ExistingResponses.Clear(); //reset the global dictionary so next time we get fresh data.  Also so it doesn't sit in memory.
-
             return dataResults;
         }
 
@@ -760,37 +764,45 @@ namespace EF2OR.Utils
             var enrollmentsResponse = await CommonUtils.ApiResponseProvider.GetApiData<SectionsNS.Sections>(ApiEndPoints.CsvUsers) as SectionsNS.Sections;
 
             var enrollmentsList = (from o in enrollmentsResponse.Property1
-                                   let students = o.students.Select(x => x.id)
-                                   let staffs = o.staff.Select(x => x)
-                                   let teachers = o.staff.Select(x => x.id)
+                                       let students = o.students.Select(x => x.id)
+                                       let staffs = o.staff.Select(x => x)
+                                       let teachers = o.staff.Select(x => x.id)
+                                   //where inputs.Schools.Contains(o.schoolReference.id)
+                                   //let students = o.students
+                                   //let staffs = o.staff
+                                   //let teachers = o.students
                                    select new
                                    {
                                        students = students,
                                        staffs = staffs,
                                        SchoolId = o.schoolReference.id,
-                                       //SchoolYear = Convert.ToString(o.courseOfferingReference.schoolYear),
+                                       SchoolYear = Convert.ToString(o.courseOfferingReference.schoolYear),
                                        //Term = o.courseOfferingReference.termDescriptor,
                                        //Subject = o.academicSubjectDescriptor,
                                        //Course = o.courseOfferingReference.localCourseCode,
                                        Section = o.uniqueSectionCode,
                                        Teachers = teachers
-                                   });
+                                   }).ToList();
 
             if (inputs != null)
             {
                 if (inputs.Schools != null)
-                    enrollmentsList = enrollmentsList.Where(x => inputs.Schools.Contains(x.SchoolId));
+                //    //List<CsvUsers> sdhf= enrollmentsList.Select(x => inputs.Schools.Contains(x.SchoolId));
+                    enrollmentsList = enrollmentsList.Where(x => inputs.Schools.Contains(x.SchoolId)).ToList();
 
-                if (inputs.Sections != null)
-                    enrollmentsList = enrollmentsList.Where(x => inputs.Sections.Contains(x.Section));
+                //if (inputs.Sections != null)
+                //    enrollmentsList = enrollmentsList.Where(x => inputs.Sections.Contains(x.Section)).ToList();
 
-                if (inputs.Teachers != null)
-                    enrollmentsList = enrollmentsList.Where(x => x.Teachers.Intersect(inputs.Teachers).Any());
+                //if (inputs.Teachers != null)
+                //    enrollmentsList = enrollmentsList.Where(x => x.Teachers.Intersect(inputs.Teachers).Any()).ToList();
+
+                if (inputs.SchoolYears != null)
+                    enrollmentsList = enrollmentsList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
             }
-            enrollmentsList = enrollmentsList.ToList();
+            //enrollmentsList = enrollmentsList.ToList();
 
             var studentsResponse = await CommonUtils.ApiResponseProvider.GetApiData<StudentsNS.Students>(ApiEndPoints.CsvUsersStudents) as StudentsNS.Students;
-            var studentsResponseInfo = (from s in studentsResponse.Property1
+            var studentsResponseInfo = (from s in studentsResponse.Property1 //where s.sexType=="M"
                                         let mainTelephone = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault(x => x.orderOfPriority == "1")
                                         let mainTelephoneNumber = mainTelephone == null ? "" : (string)mainTelephone.telephoneNumber
                                         let emailAddress = (s.electronicMails == null || s.electronicMails.Count() == 0) ? "" : (string)s.electronicMails[0].electronicMailAddress //TODO: just pick 0?.  or get based on electronicMailType field.
@@ -834,7 +846,8 @@ namespace EF2OR.Utils
 
             var studentInfo = (from e in enrollmentsList
                                from s in e.students
-                               from si in studentsResponseInfo.Where(x => x.id == s)
+                                from si in studentsResponseInfo.Where(x => x.id == s)
+                               //from si in studentsResponseInfo.Where(x => x.id == s.id)
                                select new CsvUsers
                                {
                                    sourcedId = s,
@@ -852,7 +865,7 @@ namespace EF2OR.Utils
                                    username = si.username
                                }).ToList();
 
-            var staffInfo = (from e in enrollmentsList
+             var staffInfo = (from e in enrollmentsList
                              from s in e.staffs
                              from si in staffResponseInfo.Where(x => x.id == s.id)
                              select new CsvUsers
@@ -872,10 +885,13 @@ namespace EF2OR.Utils
                                  username = si.username
                              }).ToList();
 
+            var parentResponse = await CommonUtils.ApiResponseProvider.GetApiData<ParentsNS.Parents>(ApiEndPoints.CsvUsersParents) as ParentsNS.Parents;
+
             var distinctStudents = studentInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First());
             var distinctStaff = staffInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First());
 
             var studentsAndStaff = distinctStudents.Concat(distinctStaff);
+
             return studentsAndStaff.ToList();
         }
 
@@ -893,21 +909,21 @@ namespace EF2OR.Utils
                                        orgSourcedId = o.schoolReference.id,
                                        subjects = o.academicSubjectDescriptor,
                                        SchoolId = o.schoolReference.id,
-                                       //SchoolYear = o.courseOfferingReference.id,
+                                       SchoolYear = Convert.ToString(o.courseOfferingReference.schoolYear),
                                        //Term = o.courseOfferingReference.termDescriptor,
                                        //Subject = o.academicSubjectDescriptor,
                                        //Course = o.courseOfferingReference.localCourseCode,
                                        Section = o.uniqueSectionCode,
                                        Teachers = teachers
-                                   });
+                                   }).ToList();
 
             if (inputs != null)
             {
                 if (inputs.Schools != null)
-                    enrollmentsList = enrollmentsList.Where(x => inputs.Schools.Contains(x.SchoolId));
+                    enrollmentsList = enrollmentsList.Where(x => inputs.Schools.Contains(x.SchoolId)).ToList();
 
-                //if (inputs.SchoolYears != null)
-                //    enrollmentsList = enrollmentsList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear));
+                if (inputs.SchoolYears != null)
+                    enrollmentsList = enrollmentsList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
 
                 //if (inputs.Terms != null)
                 //    enrollmentsList = enrollmentsList.Where(x => inputs.Terms.Contains(x.Term));
@@ -918,17 +934,18 @@ namespace EF2OR.Utils
                 //if (inputs.Courses != null)
                 //    enrollmentsList = enrollmentsList.Where(x => inputs.Courses.Contains(x.Course));
 
-                if (inputs.Sections != null)
-                    enrollmentsList = enrollmentsList.Where(x => inputs.Sections.Contains(x.Section));
+                //if (inputs.Sections != null)
+                //    enrollmentsList = enrollmentsList.Where(x => inputs.Sections.Contains(x.Section));
 
-                if (inputs.Teachers != null)
-                    enrollmentsList = enrollmentsList.Where(x => x.Teachers.Intersect(inputs.Teachers).Any());
+                //if (inputs.Teachers != null)
+                //    enrollmentsList = enrollmentsList.Where(x => x.Teachers.Intersect(inputs.Teachers).Any());
             }
 
-            enrollmentsList = enrollmentsList.GroupBy(x => x.sourcedId).Select(group => group.First());
+            enrollmentsList = enrollmentsList.GroupBy(x => x.title).Select(group => group.First()).ToList();
 
             return enrollmentsList.ToList();
         }
+
 
         private static async Task<PagedDataResults> GetPagedCourses(FilterInputs inputs, int pageNumber)
         {
@@ -1023,7 +1040,7 @@ namespace EF2OR.Utils
                                        termSourcedId = o.sessionReference.id,
                                        subjects = o.academicSubjectDescriptor,
                                        SchoolId = o.schoolReference.id,
-                                       //SchoolYear = Convert.ToString(o.courseOfferingReference.schoolYear),
+                                       SchoolYear = Convert.ToString(o.courseOfferingReference.schoolYear),
                                        //Term = o.courseOfferingReference.termDescriptor,
                                        //Subject = o.academicSubjectDescriptor,
                                        //Course = o.courseOfferingReference.localCourseCode,
@@ -1036,11 +1053,14 @@ namespace EF2OR.Utils
                 if (inputs.Schools != null)
                     enrollmentsList = enrollmentsList.Where(x => inputs.Schools.Contains(x.SchoolId));
 
-                if (inputs.Sections != null)
-                    enrollmentsList = enrollmentsList.Where(x => inputs.Sections.Contains(x.Section));
+                if (inputs.SchoolYears != null)
+                    enrollmentsList = enrollmentsList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
 
-                if (inputs.Teachers != null)
-                    enrollmentsList = enrollmentsList.Where(x => x.Teachers.Intersect(inputs.Teachers).Any());
+                //if (inputs.Sections != null)
+                //    enrollmentsList = enrollmentsList.Where(x => inputs.Sections.Contains(x.Section));
+
+                //if (inputs.Teachers != null)
+                //    enrollmentsList = enrollmentsList.Where(x => x.Teachers.Intersect(inputs.Teachers).Any());
             }
 
             return enrollmentsList.ToList();
@@ -1134,21 +1154,21 @@ namespace EF2OR.Utils
                                        students = students,
                                        staffs = staffs,
                                        SchoolId = o.schoolReference.id,
-                                       //SchoolYear = Convert.ToString(o.courseOfferingReference.schoolYear),
+                                       SchoolYear = Convert.ToString(o.courseOfferingReference.schoolYear),
                                        //Term = o.courseOfferingReference.termDescriptor,
                                        //Subject = o.academicSubjectDescriptor,
                                        //Course = o.courseOfferingReference.localCourseCode,
                                        Section = o.uniqueSectionCode,
                                        Teachers = teachers
-                                   });
+                                   }).ToList();
 
             if (inputs != null)
             {
                 if (inputs.Schools != null)
-                    enrollmentsList = enrollmentsList.Where(x => inputs.Schools.Contains(x.SchoolId));
+                    enrollmentsList = enrollmentsList.Where(x => inputs.Schools.Contains(x.SchoolId)).ToList();
 
-                //if (inputs.SchoolYears != null)
-                //    enrollmentsList = enrollmentsList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear));
+                if (inputs.SchoolYears != null)
+                    enrollmentsList = enrollmentsList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
 
                 //if (inputs.Terms != null)
                 //    enrollmentsList = enrollmentsList.Where(x => inputs.Terms.Contains(x.Term));
@@ -1159,11 +1179,11 @@ namespace EF2OR.Utils
                 //if (inputs.Courses != null)
                 //    enrollmentsList = enrollmentsList.Where(x => inputs.Courses.Contains(x.Course));
 
-                if (inputs.Sections != null)
-                    enrollmentsList = enrollmentsList.Where(x => inputs.Sections.Contains(x.Section));
+                //if (inputs.Sections != null)
+                //    enrollmentsList = enrollmentsList.Where(x => inputs.Sections.Contains(x.Section));
 
-                if (inputs.Teachers != null)
-                    enrollmentsList = enrollmentsList.Where(x => x.Teachers.Intersect(inputs.Teachers).Any());
+                //if (inputs.Teachers != null)
+                //    enrollmentsList = enrollmentsList.Where(x => x.Teachers.Intersect(inputs.Teachers).Any());
             }
 
             var studentInfo = (from e in enrollmentsList
@@ -1175,7 +1195,7 @@ namespace EF2OR.Utils
                                    schoolSourcedId = e.schoolSourcedId,
                                    userSourcedId = s.id,
                                    role = "student"
-                               });
+                               }).ToList();
 
             var staffInfo = (from e in enrollmentsList
                              from s in e.staffs
@@ -1186,7 +1206,7 @@ namespace EF2OR.Utils
                                  schoolSourcedId = e.schoolSourcedId,
                                  userSourcedId = s.id,
                                  role = "teacher"
-                             });
+                             }).ToList();
 
             var allEnrollments = studentInfo.Concat(staffInfo).ToList();
 
@@ -1308,22 +1328,22 @@ namespace EF2OR.Utils
                                        startDate = startDate.ToString("yyyy-MM-dd"),
                                        endDate = endDate.ToString("yyyy-MM-dd"),
                                        SchoolId = o.schoolReference.id,
-                                       //SchoolYear = o.courseOfferingReference.schoolYear,
+                                       SchoolYear = Convert.ToString(o.courseOfferingReference.schoolYear),
                                        //Term = o.courseOfferingReference.termDescriptor,
                                        //Subject = o.academicSubjectDescriptor,
                                        //Course = o.courseOfferingReference.localCourseCode,
                                        Section = o.uniqueSectionCode,
                                        Teachers = teachers,
                                        schoolYear = o.sessionReference.schoolYear
-                                   });
+                                   }).ToList();
 
             if (inputs != null)
             {
                 if (inputs.Schools != null)
-                    enrollmentsList = enrollmentsList.Where(x => inputs.Schools.Contains(x.SchoolId));
+                    enrollmentsList = enrollmentsList.Where(x => inputs.Schools.Contains(x.SchoolId)).ToList();
 
-                //if (inputs.SchoolYears != null)
-                //    enrollmentsList = enrollmentsList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear));
+                if (inputs.SchoolYears != null)
+                    enrollmentsList = enrollmentsList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
 
                 //if (inputs.Terms != null)
                 //    enrollmentsList = enrollmentsList.Where(x => inputs.Terms.Contains(x.Term));
@@ -1334,14 +1354,14 @@ namespace EF2OR.Utils
                 //if (inputs.Courses != null)
                 //    enrollmentsList = enrollmentsList.Where(x => inputs.Courses.Contains(x.Course));
 
-                if (inputs.Sections != null)
-                    enrollmentsList = enrollmentsList.Where(x => inputs.Sections.Contains(x.Section));
+                //if (inputs.Sections != null)
+                //    enrollmentsList = enrollmentsList.Where(x => inputs.Sections.Contains(x.Section));
 
-                if (inputs.Teachers != null)
-                    enrollmentsList = enrollmentsList.Where(x => x.Teachers.Intersect(inputs.Teachers).Any());
+                //if (inputs.Teachers != null)
+                //    enrollmentsList = enrollmentsList.Where(x => x.Teachers.Intersect(inputs.Teachers).Any());
             }
 
-            enrollmentsList = enrollmentsList.GroupBy(x => x.sourcedId).Select(group => group.First());
+            enrollmentsList = enrollmentsList.GroupBy(x => x.sourcedId).Select(group => group.First()).ToList();
 
             context.Dispose();
             return enrollmentsList.ToList();

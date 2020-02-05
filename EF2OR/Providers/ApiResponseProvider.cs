@@ -384,12 +384,13 @@ namespace EF2OR.Providers
             System.Diagnostics.Stopwatch stopWatch = new System.Diagnostics.Stopwatch();
             stopWatch.Start();
             Type type = typeof(T);
+     //begin To Be modified       
             while (getMoreRecords)
             {
                 List<Action> actionsToExecute = new List<Action>(Properties.Settings.Default.ThreadQty);
-                for (int i=0; i < Properties.Settings.Default.ThreadQty; i++)
+                for (int i = 0; i < Properties.Settings.Default.ThreadQty; i++)
                 {
-                    var pi = new PageInfo { Offset = offset + i*100 };
+                    var pi = new PageInfo { Offset = offset + i * 100 };
                     Action actionToAdd = () => actSinglePageRequest(pi, type);
                     actionsToExecute.Add(actionToAdd);
                 };
@@ -398,6 +399,7 @@ namespace EF2OR.Providers
                 YieldTime(1000);
                 actionsToExecute.Clear();
             }
+
             stopWatch.Stop();
             var ellapsed = stopWatch.Elapsed;
             //JArray finalResponse = new JArray();

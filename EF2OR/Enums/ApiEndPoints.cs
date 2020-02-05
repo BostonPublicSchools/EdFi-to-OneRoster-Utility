@@ -27,5 +27,6 @@
         public const string CsvClasses = "enrollment/sections";
         public const string CsvEnrollments = "enrollment/sections";
         public const string CsvAcademicSessions = "enrollment/sections";
+        public const string CsvUsersParents = "parents";
     }
 }
