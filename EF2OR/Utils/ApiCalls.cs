@@ -533,13 +533,13 @@ namespace EF2OR.Utils
             {
                 CommonUtils.ExistingResponses.Clear(); //reset the global dictionary so we get fresh data
             }
-            
-            //dataResults.Orgs = await GetCsvOrgs(inputs);
-            //dataResults.Users = await GetCsvUsers(inputs);
-            //dataResults.Courses = await GetCsvCourses(inputs);
-            //dataResults.Classes = await GetCsvClasses(inputs);
+
+            dataResults.Orgs = await GetCsvOrgs(inputs);
+            dataResults.Users = await GetCsvUsers(inputs);
+            dataResults.Courses = await GetCsvCourses(inputs);
+            dataResults.Classes = await GetCsvClasses(inputs);
             dataResults.Enrollments = await GetCsvEnrollments(inputs);
-            //dataResults.AcademicSessions = await GetCsvAcademicSessions(inputs);
+            dataResults.AcademicSessions = await GetCsvAcademicSessions(inputs);
 
             //dataResults.Orgs = new List<CsvOrgs>();
             //dataResults.Courses = new List<CsvCourses>();
