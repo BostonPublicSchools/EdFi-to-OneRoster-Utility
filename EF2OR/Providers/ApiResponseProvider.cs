@@ -16,6 +16,7 @@ using SchoolsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Schools;
 using SectionsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Sections;
 using StaffsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Staffs;
 using StudentsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Students;
+using ParentNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Parents;
 using EdFiOdsApiNS = EF2OR.Entities.EdFiOdsApi;
 using System.Net;
 
@@ -306,19 +307,27 @@ namespace EF2OR.Providers
                             });
                         }
                     lock (lstExceptions)
-                    if (apiResponse.IsSuccessStatusCode == false)
+                        if (apiResponse.IsSuccessStatusCode == false)
                         {
                             lstExceptions.Add(new Exception(apiResponse.ReasonPhrase));
                         }
+
+
 
                     Task<string> contentTask = apiResponse.Content.ReadAsStringAsync();
                     contentTask.Wait();
                     YieldTime(500);
                     var responseJson = contentTask.Result;
-                    var responseArray = JArray.Parse(responseJson);
+                    var responseArray = new JArray();
+                    if (apiResponse.IsSuccessStatusCode == true)
+                    {
+                         responseArray = JArray.Parse(responseJson);
+                    }
+
+                        
 
                     lock (SyncObject)
-                    if (responseArray != null && responseArray.Count() > 0)
+                    if (responseArray != null && responseArray.Count() > 0 && apiResponse.IsSuccessStatusCode==true)
                         {
                             EdFiOdsApiNS.IEdFiOdsData entityToInsert = null;
                             if (entityType == typeof(EdFiOdsApiNS.TermDescriptors))
@@ -357,6 +366,14 @@ namespace EF2OR.Providers
                             {
                                 var tResult = Newtonsoft.Json.JsonConvert.DeserializeObject<StudentsNS.Class1[]>(responseJson);
                                 entityToInsert = new StudentsNS.Students()
+                                {
+                                    Property1 = tResult
+                                };
+                            }
+                            if (entityType == typeof(ParentNS.Parents))
+                            {
+                                var tResult = Newtonsoft.Json.JsonConvert.DeserializeObject<ParentNS.Class1[]>(responseJson);
+                                entityToInsert = new ParentNS.Parents()
                                 {
                                     Property1 = tResult
                                 };

@@ -885,7 +885,7 @@ namespace EF2OR.Utils
                                  username = si.username
                              }).ToList();
 
-            var parentResponse = await CommonUtils.ApiResponseProvider.GetApiData<ParentsNS.Parents>(ApiEndPoints.CsvUsersParents) as ParentsNS.Parents;
+            //var parentResponse = await CommonUtils.ApiResponseProvider.GetApiData<ParentsNS.Parents>(ApiEndPoints.CsvUsersParents) as ParentsNS.Parents;
 
             var distinctStudents = studentInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First());
             var distinctStaff = staffInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First());
