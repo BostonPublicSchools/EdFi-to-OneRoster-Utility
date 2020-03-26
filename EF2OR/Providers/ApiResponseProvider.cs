@@ -321,7 +321,7 @@ namespace EF2OR.Providers
                     var responseArray = new JArray();
                     if (apiResponse.IsSuccessStatusCode == true)
                     {
-                         responseArray = JArray.Parse(responseJson);
+                        responseArray = JArray.Parse(responseJson);
                     }
 
                         
