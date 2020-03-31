@@ -793,8 +793,8 @@ namespace EF2OR.Utils
                 //if (inputs.Sections != null)
                 //    enrollmentsList = enrollmentsList.Where(x => inputs.Sections.Contains(x.Section)).ToList();
 
-                //if (inputs.Teachers != null)
-                //    enrollmentsList = enrollmentsList.Where(x => x.Teachers.Intersect(inputs.Teachers).Any()).ToList();
+                if (inputs.Teachers != null)
+                    enrollmentsList = enrollmentsList.Where(x => x.Teachers.Intersect(inputs.Teachers).Any()).ToList();
 
                 if (inputs.SchoolYears != null)
                     enrollmentsList = enrollmentsList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
@@ -803,7 +803,8 @@ namespace EF2OR.Utils
 
             var studentsResponse = await CommonUtils.ApiResponseProvider.GetApiData<StudentsNS.Students>(ApiEndPoints.CsvUsersStudents) as StudentsNS.Students;
             var studentsResponseInfo = (from s in studentsResponse.Property1 //where s.sexType=="M"
-                                        let mainTelephone = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault(x => x.orderOfPriority == "1")
+                                      //let mainTelephone = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault(x => x.orderOfPriority == "1")
+                                        let mainTelephone = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault()
                                         let mainTelephoneNumber = mainTelephone == null ? "" : (string)mainTelephone.telephoneNumber
                                         let emailAddress = (s.electronicMails == null || s.electronicMails.Count() == 0) ? "" : (string)s.electronicMails[0].electronicMailAddress //TODO: just pick 0?.  or get based on electronicMailType field.
                                         let mobile = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault(x => (string)x.telephoneNumberType == "Mobile")
@@ -819,13 +820,15 @@ namespace EF2OR.Utils
                                             email = emailAddress,
                                             sms = mobileNumber,
                                             phone = mainTelephoneNumber,
-                                            username = s.loginId
+                                            username = s.loginId,
+                                            grade = GetHighestGrade(s.schoolAssociations)
                                         }).ToList();
 
 
             var staffResponse = await CommonUtils.ApiResponseProvider.GetApiData<StaffNS.Staffs>(ApiEndPoints.CsvUsersStaff) as StaffNS.Staffs;
             var staffResponseInfo = (from s in staffResponse.Property1
-                                     let mainTelephone = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault(x => x.orderOfPriority == "1")
+                                     //let mainTelephone = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault(x => x.orderOfPriority == "1")
+                                     let mainTelephone = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault()
                                      let mainTelephoneNumber = mainTelephone == null ? "" : mainTelephone.telephoneNumber
                                      let emailAddress = (s.electronicMails == null || s.electronicMails.Count() == 0) ? "" : s.electronicMails[0].electronicMailAddress //TODO: just pick 0?.  or get based on electronicMailType field.
                                      let mobile = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault(x => x.telephoneNumberType == "Mobile")
@@ -842,6 +845,7 @@ namespace EF2OR.Utils
                                          sms = mobileNumber,
                                          phone = mainTelephoneNumber,
                                          username = s.loginId
+                                         
                                      }).ToList();
 
             var studentInfo = (from e in enrollmentsList
@@ -862,7 +866,8 @@ namespace EF2OR.Utils
                                    email = si.email,
                                    sms = si.sms,
                                    phone = si.phone,
-                                   username = si.username
+                                   username = si.username,
+                                   grade = si.grade
                                }).ToList();
 
              var staffInfo = (from e in enrollmentsList
@@ -887,10 +892,12 @@ namespace EF2OR.Utils
 
             //var parentResponse = await CommonUtils.ApiResponseProvider.GetApiData<ParentsNS.Parents>(ApiEndPoints.CsvUsersParents) as ParentsNS.Parents;
 
-            var distinctStudents = studentInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First());
-            var distinctStaff = staffInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First());
+            var distinctStudents = studentInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First()).ToList();
+            var distinctStaff = staffInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First()).ToList();
 
-            var studentsAndStaff = distinctStudents.Concat(distinctStaff);
+            var studentsAndStaff = distinctStudents.Concat(distinctStaff).ToList();
+
+            
 
             return studentsAndStaff.ToList();
         }
@@ -1739,6 +1746,44 @@ namespace EF2OR.Utils
                 new CsvManifest { propertyName = "source.systemName", value = "absent" },
                 new CsvManifest { propertyName = "source.systemCode", value = "absent" }
             };
+        }
+        private static string GetHighestGrade(StudentsNS.Schoolassociation[] s)
+        {
+            List<int> lstGrade = new List<int>();
+            string gradeLevel = string.Empty;
+            IDictionary<int, string> dict = new Dictionary<int, string>();
+            try
+            {
+                dict.Add(-3, "Infant/toddler");
+                dict.Add(-2, "Preschool/Prekindergarten");
+                dict.Add(-1, "Kindergarten");
+                dict.Add(1, "First grade");
+                dict.Add(2, "Second grade");
+                dict.Add(3, "Third grade");
+                dict.Add(4, "Fourth grade");
+                dict.Add(5, "Fifth grade");
+                dict.Add(6, "Sixth grade");
+                dict.Add(7, "Seventh grade");
+                dict.Add(8, "Eighth grade");
+                dict.Add(9, "Ninth grade");
+                dict.Add(10, "Tenth grade");
+                dict.Add(11, "Eleventh grade");
+                dict.Add(12, "Twelfth grade");
+                foreach (StudentsNS.Schoolassociation element in s)
+                {
+                    if (string.IsNullOrEmpty(element.gradeLevel.Trim()))
+                        continue;
+                    int key = dict.Where(kvp => kvp.Value == element.gradeLevel).Select(kvp => kvp.Key).FirstOrDefault();
+                    lstGrade.Add(key);
+                }
+                if (lstGrade.Count > 0)
+                    gradeLevel = dict[lstGrade.Max()].ToString();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            return gradeLevel;
         }
         #endregion
 
