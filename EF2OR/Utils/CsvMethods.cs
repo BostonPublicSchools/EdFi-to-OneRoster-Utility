@@ -33,7 +33,8 @@ namespace EF2OR.Utils
                 //Subjects = subjects,
                 //Courses = courses,
                 Teachers = teachers,
-                Sections = sections
+                Sections = sections,
+                SchoolIds= new List<string>()
             };
             model = await ApiCalls.GetDataResults(inputs, oneRosterVersion);
 

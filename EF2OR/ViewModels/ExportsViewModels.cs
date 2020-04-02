@@ -77,6 +77,7 @@ namespace EF2OR.ViewModels
     public class FilterInputs
     {
         public List<string> Schools { get; set; }
+        public List<string> SchoolIds { get; set; }
         public List<string> SchoolYears { get; set; }
         public List<string> Terms { get; set; }
         //public List<string> Subjects { get; set; }

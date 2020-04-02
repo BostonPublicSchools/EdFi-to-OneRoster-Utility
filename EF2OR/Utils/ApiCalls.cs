@@ -19,6 +19,10 @@ using StudentsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Students;
 using ParentsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Parents;
 using EF2OR.Entities.EdFiOdsApi;
 using SectionEnrollmentsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.SectionEnrollments;
+using ParentNS = EF2OR.Entities.EdFiOdsApi.Resourses.Parent;
+using StudentParentAssociationNS = EF2OR.Entities.EdFiOdsApi.Resourses.StudentParentAssociation;
+using StudentSchoolAssociationNS = EF2OR.Entities.EdFiOdsApi.Resourses.StudentSchoolAssociation;
+using StudentSectionAssociationNS = EF2OR.Entities.EdFiOdsApi.Resourses.StudentSectionAssociation;
 
 namespace EF2OR.Utils
 {
@@ -535,6 +539,9 @@ namespace EF2OR.Utils
             }
 
             dataResults.Orgs = await GetCsvOrgs(inputs);
+            //Insert School Id Nos
+            foreach (CsvOrgs s in dataResults.Orgs)
+                inputs.SchoolIds.Add(s.identifier);
             dataResults.Users = await GetCsvUsers(inputs);
             dataResults.Courses = await GetCsvCourses(inputs);
             dataResults.Classes = await GetCsvClasses(inputs);
@@ -681,7 +688,8 @@ namespace EF2OR.Utils
                                      sourcedId = o.id,
                                      name = o.nameOfInstitution,
                                      type = "school",
-                                     identifier = blankIdentifier ? "" : o.stateOrganizationId,
+                                     //identifier = blankIdentifier ? "" : o.stateOrganizationId,// Commented Krishanraj to Fix Student Data Need this Field
+                                     identifier = o.schoolId.ToString(),//School Required for Student Data..
                                      parentSourcedId = (string)o.localEducationAgencyReference.id,
                                      SchoolId = (string)o.id
                                  });
@@ -799,7 +807,43 @@ namespace EF2OR.Utils
                 if (inputs.SchoolYears != null)
                     enrollmentsList = enrollmentsList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
             }
-            //enrollmentsList = enrollmentsList.ToList();
+
+            //var enrollmentsSecAssoctiResponse = await CommonUtils.ApiResponseProvider.GetApiData<StudentSectionAssociationNS.StudentSectionAssociation>(ApiEndPoints.CsvStudentSectionAssociation) as StudentSectionAssociationNS.StudentSectionAssociation;
+            //var enrollmentsSSAList = (from o in enrollmentsSecAssoctiResponse.Property1
+            //                       select new
+            //                       {
+            //                           StudetUniqueId = o.studentReference.studentUniqueId,
+            //                           SchoolId = o.sectionReference.schoolId,
+            //                           SchoolYear = o.sectionReference.schoolYear,
+            //                           BeginDate = o.beginDate,
+            //                           EndDate = o.endDate
+            //                       }).ToList();
+            //if (inputs != null)
+            //{
+            //    if (inputs.Schools != null)
+            //        enrollmentsSSAList = enrollmentsSSAList.Where(x => inputs.Schools.Contains(x.SchoolId)).ToList();
+            //    if (inputs.SchoolYears != null)
+            //        enrollmentsSSAList = enrollmentsSSAList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
+            //    enrollmentsSSAList = enrollmentsSSAList.Where(x => Convert.ToDateTime(x.EndDate) > DateTime.Now).ToList();
+            //}
+
+            var studentSchoolAssoctionResponse = await CommonUtils.ApiResponseProvider.GetApiData< StudentSchoolAssociationNS.StudentSchoolAssociation>(ApiEndPoints.CsvStudentSchoolAssociation) as StudentSchoolAssociationNS.StudentSchoolAssociation;
+            var studentSchoolAssoctionList = (from o in studentSchoolAssoctionResponse.Property1
+                                      select new
+                                      {
+                                          StudetUniqueId = o.studentReference.studentUniqueId,
+                                          SchoolId = o.schoolReference.schoolId,
+                                          SchoolYear = o.schoolYearTypeReference.schoolYear,
+                                          ExitWithdrawDate = o.exitWithdrawDate
+                                      }).ToList();
+            if (inputs != null)
+            {
+                if (inputs.Schools != null)
+                    studentSchoolAssoctionList = studentSchoolAssoctionList.Where(x => inputs.SchoolIds.Contains(x.SchoolId)).ToList();
+                if (inputs.SchoolYears != null)
+                    studentSchoolAssoctionList = studentSchoolAssoctionList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
+                studentSchoolAssoctionList = studentSchoolAssoctionList.Where(x => string.IsNullOrEmpty(x.ExitWithdrawDate)).ToList();
+            }
 
             var studentsResponse = await CommonUtils.ApiResponseProvider.GetApiData<StudentsNS.Students>(ApiEndPoints.CsvUsersStudents) as StudentsNS.Students;
             var studentsResponseInfo = (from s in studentsResponse.Property1 //where s.sexType=="M"
@@ -822,8 +866,7 @@ namespace EF2OR.Utils
                                             phone = mainTelephoneNumber,
                                             username = s.loginId,
                                             //grade = s.schoolAssociations.FirstOrDefault().gradeLevel
-                                            grade = GetHighestGrade(s.schoolAssociations)
-
+                                            grade = GetHighestGrade(s.schoolAssociations)//Get highest Grade 
                                         }).ToList();
 
 
@@ -848,13 +891,16 @@ namespace EF2OR.Utils
                                          username = s.loginId
                                      }).ToList();
 
-            var studentInfo = (from e in enrollmentsList
-                               from s in e.students
-                               from si in studentsResponseInfo.Where(x => x.id == s)
+            //var studentInfo = (from e in enrollmentsList
+            //                   from s in e.students
+            //                   from si in studentsResponseInfo.Where(x => x.id == s)
+            var studentInfo = (from e in studentSchoolAssoctionList
+                               //from s in e.students
+                               from si in studentsResponseInfo.Where(x => x.userId == e.StudetUniqueId)
                                    //from si in studentsResponseInfo.Where(x => x.id == s.id)
                                select new CsvUsers
                                {
-                                   sourcedId = s,
+                                   sourcedId = si.id,
                                    orgSourcedIds = e.SchoolId,
                                    enabledUser = "TRUE",
                                    role = "student",
@@ -889,14 +935,11 @@ namespace EF2OR.Utils
                                  phone = si.phone,
                                  username = si.username
                              }).ToList();
-
             //var parentResponse = await CommonUtils.ApiResponseProvider.GetApiData<ParentsNS.Parents>(ApiEndPoints.CsvUsersParents) as ParentsNS.Parents;
 
             var distinctStudents = studentInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First()).ToList();
             var distinctStaff = staffInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First()).ToList();
-
             var studentsAndStaff = distinctStudents.Concat(distinctStaff).ToList();
-
             return studentsAndStaff.ToList();
         }
 
@@ -1745,7 +1788,11 @@ namespace EF2OR.Utils
                 new CsvManifest { propertyName = "source.systemCode", value = "absent" }
             };
         }
-
+        /// <summary>
+        /// Get Highest Gade and return
+        /// </summary>
+        /// <param name="s"> School Asssocations for a Student</param>
+        /// <returns></returns>
         private static string GetHighestGrade(StudentsNS.Schoolassociation[] s)
         {
             List<int> lstGrade = new List<int>();

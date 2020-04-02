@@ -12,13 +12,16 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using System.Net;
 using SchoolsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Schools;
 using SectionsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Sections;
 using StaffsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Staffs;
 using StudentsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Students;
-using ParentNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Parents;
 using EdFiOdsApiNS = EF2OR.Entities.EdFiOdsApi;
-using System.Net;
+using ParentNS = EF2OR.Entities.EdFiOdsApi.Resourses.Parent;
+using StudentParentAssociationNS = EF2OR.Entities.EdFiOdsApi.Resourses.StudentParentAssociation;
+using StudentSchoolAssociationNS = EF2OR.Entities.EdFiOdsApi.Resourses.StudentSchoolAssociation;
+using StudentSectionAssociationNS = EF2OR.Entities.EdFiOdsApi.Resourses.StudentSectionAssociation;
 
 namespace EF2OR.Providers
 {
@@ -378,6 +381,39 @@ namespace EF2OR.Providers
                                     Property1 = tResult
                                 };
                             }
+                            if (entityType == typeof(ParentNS.Parents))
+                            {
+                                var tResult = Newtonsoft.Json.JsonConvert.DeserializeObject<ParentNS.Class1[]>(responseJson);
+                                entityToInsert = new ParentNS.Parents()
+                                {
+                                    Property1 = tResult
+                                };
+                            }
+                            if (entityType == typeof(StudentSectionAssociationNS.StudentSectionAssociation))
+                            {
+                                var tResult = Newtonsoft.Json.JsonConvert.DeserializeObject<StudentSectionAssociationNS.Class1[]>(responseJson);
+                                entityToInsert = new StudentSectionAssociationNS.StudentSectionAssociation()
+                                {
+                                    Property1 = tResult
+                                };
+                            }
+                            if (entityType == typeof(StudentSchoolAssociationNS.StudentSchoolAssociation))
+                            {
+                                var tResult = Newtonsoft.Json.JsonConvert.DeserializeObject<StudentSchoolAssociationNS.Class1[]>(responseJson);
+                                entityToInsert = new StudentSchoolAssociationNS.StudentSchoolAssociation()
+                                {
+                                    Property1 = tResult
+                                };
+                            }
+                            if (entityType == typeof(StudentParentAssociationNS.StudentParentAssociation))
+                            {
+                                var tResult = Newtonsoft.Json.JsonConvert.DeserializeObject<StudentParentAssociationNS.Class1[]>(responseJson);
+                                entityToInsert = new StudentParentAssociationNS.StudentParentAssociation()
+                                {
+                                    Property1 = tResult
+                                };
+                            }
+
                             if (entityToInsert != null)
                             {
                                 lstJsonResponses.Add(entityToInsert);
@@ -498,6 +534,30 @@ namespace EF2OR.Providers
                 {
                     var termDescriptorsResult = lstJsonResponses.Cast<EdFiOdsApiNS.TermDescriptors>();
                     var tResult = result as EdFiOdsApiNS.TermDescriptors;
+                    tResult.Property1 = termDescriptorsResult.SelectMany(p => p.Property1).ToArray();
+                }
+                if (typeof(T) == typeof(StudentSectionAssociationNS.StudentSectionAssociation))
+                {
+                    var termDescriptorsResult = lstJsonResponses.Cast<StudentSectionAssociationNS.StudentSectionAssociation>();
+                    var tResult = result as StudentSectionAssociationNS.StudentSectionAssociation;
+                    tResult.Property1 = termDescriptorsResult.SelectMany(p => p.Property1).ToArray();
+                }
+                if (typeof(T) == typeof(StudentParentAssociationNS.StudentParentAssociation))
+                {
+                    var termDescriptorsResult = lstJsonResponses.Cast<StudentParentAssociationNS.StudentParentAssociation>();
+                    var tResult = result as StudentParentAssociationNS.StudentParentAssociation;
+                    tResult.Property1 = termDescriptorsResult.SelectMany(p => p.Property1).ToArray();
+                }
+                if (typeof(T) == typeof(StudentSchoolAssociationNS.StudentSchoolAssociation))
+                {
+                    var termDescriptorsResult = lstJsonResponses.Cast<StudentSchoolAssociationNS.StudentSchoolAssociation>();
+                    var tResult = result as StudentSchoolAssociationNS.StudentSchoolAssociation;
+                    tResult.Property1 = termDescriptorsResult.SelectMany(p => p.Property1).ToArray();
+                }
+                if (typeof(T) == typeof(ParentNS.Parents))
+                {
+                    var termDescriptorsResult = lstJsonResponses.Cast<ParentNS.Parents>();
+                    var tResult = result as ParentNS.Parents;
                     tResult.Property1 = termDescriptorsResult.SelectMany(p => p.Property1).ToArray();
                 }
             }
