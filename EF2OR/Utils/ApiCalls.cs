@@ -1792,6 +1792,49 @@ namespace EF2OR.Utils
                 new CsvManifest { propertyName = "source.systemCode", value = "absent" }
             };
         }
+        /// <summary>
+        /// Get Highest Gade and return
+        /// </summary>
+        /// <param name="s"> School Asssocations for a Student</param>
+        /// <returns></returns>
+        private static string GetHighestGrade(StudentsNS.Schoolassociation[] s)
+        {
+            List<int> lstGrade = new List<int>();
+            string gradeLevel = string.Empty;
+            IDictionary<int, string> dict = new Dictionary<int, string>();
+            try
+            {
+                dict.Add(-3, "Infant/toddler");
+                dict.Add(-2, "Preschool/Prekindergarten");
+                dict.Add(-1, "Kindergarten");
+                dict.Add(1, "First grade");
+                dict.Add(2, "Second grade");
+                dict.Add(3, "Third grade");
+                dict.Add(4, "Fourth grade");
+                dict.Add(5, "Fifth grade");
+                dict.Add(6, "Sixth grade");
+                dict.Add(7, "Seventh grade");
+                dict.Add(8, "Eighth grade");
+                dict.Add(9, "Ninth grade");
+                dict.Add(10, "Tenth grade");
+                dict.Add(11, "Eleventh grade");
+                dict.Add(12, "Twelfth grade");
+                foreach (StudentsNS.Schoolassociation element in s)
+                {
+                    if (string.IsNullOrEmpty(element.gradeLevel.Trim()))
+                        continue;
+                    int key = dict.Where(kvp => kvp.Value == element.gradeLevel).Select(kvp => kvp.Key).FirstOrDefault();
+                    lstGrade.Add(key);
+                }
+                if (lstGrade.Count > 0)
+                    gradeLevel = dict[lstGrade.Max()].ToString();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            return gradeLevel;
+        }
         #endregion
 
         #region PrivateMethods
