@@ -13,27 +13,30 @@ namespace EF2OR.Entities.EdFiOdsApi.Resourses.Parent
 
     public class Class1
     {
-        public string studentUniqueId;
-        public string middleName;
-
         public string id { get; set; }
         public string ParentUniqueId { get; set; }
-        public Address[] address { get; set; }
-        public Address[] internationalAddress { get; set; }
-        public Electronicmail[] electronicMails { get; set; }
-        public string name { get; set; }
-        public string loginId { get; set; }
-        public string otherName { get; set; }
+        public string firstName { get; set; }
+        public string generationCodeSuffix { get; set; }
+        public string lastSurname { get; set; }
+        public string middleName { get; set; }
+        public string maidenName { get; set; }
+        public string personalTitlePrefix { get; set; }
         public string sexType { get; set; }
+        public Address[] address { get; set; }
+        public Electronicmail[] electronicMails { get; set; }
+        public IdentificationDocuments[] identificationDocuments { get; set; }
+        public Address[] internationalAddresses { get; set; }
+        public OtherNames[] otherNames { get; set; }
         public Telephone[] telephones { get; set; }
+        public string _etag { get; set; }
     }
 
     public class Telephone
     {
-        public string telephoneNumber;
-        public string telephoneNumberType;
-
+        public string telephoneNumber { get; set; }
+        public string telephoneNumberType { get; set; }
         public string orderOfPriority { get; set; }
+        public string textMessageCapabilityIndicator { get; set; }
     }
 
     public class Electronicmail
@@ -42,10 +45,17 @@ namespace EF2OR.Entities.EdFiOdsApi.Resourses.Parent
         public string electronicMailAddress { get; set; }
     }
 
-    public class Identificationcode
+    public class IdentificationDocuments
     {
         public string staffIdentificationSystemDescriptor { get; set; }
         public string identificationCode { get; set; }
+        public string identificationDocumentUseType { get; set; }
+        public string personalInformationVerificationType { get; set; }
+        public string issuerCountryDescriptor { get; set; }
+        public string documentTitle { get; set; }
+        public string documentExpirationDate { get; set; }
+        public string issuerDocumentIdentificationCode { get; set; }
+        public string issuerName { get; set; }
     }
 
     public class Classification
@@ -61,5 +71,24 @@ namespace EF2OR.Entities.EdFiOdsApi.Resourses.Parent
         public string stateAbbreviationType { get; set; }
         public string postalCode { get; set; }
         public string nameOfCounty { get; set; }
+        public string countryDescriptor { get; set; }
+        public string addressLine1 { get; set; }
+        public string addressLine2 { get; set; }
+        public string addressLine3 { get; set; }
+        public string addressLine4 { get; set; }
+        public string latitude { get; set; }
+        public string longitude { get; set; }
+        public string beginDate { get; set; }
+        public string endDate { get; set; }
+    }
+
+    public class OtherNames
+    {
+        public string otherNameType { get; set; }
+        public string personalTitlePrefix { get; set; }
+        public string firstName { get; set; }
+        public string middleName { get; set; }
+        public string lastSurname { get; set; }
+        public string generationCodeSuffix { get; set; }
     }
 }

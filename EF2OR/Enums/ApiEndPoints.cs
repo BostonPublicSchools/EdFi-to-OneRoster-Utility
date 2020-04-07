@@ -31,5 +31,6 @@
         public const string CsvUsersParents = "parents";
         public const string CsvStudentSectionAssociation = "studentSectionAssociations";
         public const string CsvStudentSchoolAssociation = "studentSchoolAssociations";
+        public const string CsvStudPrntAsction = "studentParentAssociations";
     }
 }

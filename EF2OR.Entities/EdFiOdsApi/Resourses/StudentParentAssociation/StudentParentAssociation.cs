@@ -13,10 +13,14 @@ namespace EF2OR.Entities.EdFiOdsApi.Resourses.StudentParentAssociation
     public class Class1
     {
         public string id { get; set; }
-        public StudentReference studentReference { get; set; }
         public ParentReference parentReference { get; set; }
-        public string schoolChoiceTransfer { get; set; }
-        public string educationPlans { get; set; }
+        public StudentReference studentReference { get; set; }
+        public string contactPriority { get; set; }
+        public string contactRestrictions { get; set; }
+        public string emergencyContactStatus { get; set; }
+        public string livesWith { get; set; }
+        public string primaryContactStatus { get; set; }
+        public string relationType { get; set; }
         public string _etag { get; set; }
     }
         public class StudentReference
@@ -26,7 +30,7 @@ namespace EF2OR.Entities.EdFiOdsApi.Resourses.StudentParentAssociation
     }
     public class ParentReference
     {
-        public string studentUniqueId { get; set; }
+        public string parentUniqueId { get; set; }
         public Link link { get; set; }
     }
     public class Link

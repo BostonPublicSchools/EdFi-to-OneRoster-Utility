@@ -16,7 +16,6 @@ using StaffNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Staffs;
 using SchoolsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Schools;
 using SectionsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Sections;
 using StudentsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Students;
-using ParentsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.Parents;
 using EF2OR.Entities.EdFiOdsApi;
 using SectionEnrollmentsNS = EF2OR.Entities.EdFiOdsApi.Enrollment.SectionEnrollments;
 using ParentNS = EF2OR.Entities.EdFiOdsApi.Resourses.Parent;
@@ -831,10 +830,12 @@ namespace EF2OR.Utils
             var studentSchoolAssoctionList = (from o in studentSchoolAssoctionResponse.Property1
                                       select new
                                       {
+                                          id=o.id,
                                           StudetUniqueId = o.studentReference.studentUniqueId,
                                           SchoolId = o.schoolReference.schoolId,
                                           SchoolYear = o.schoolYearTypeReference.schoolYear,
-                                          ExitWithdrawDate = o.exitWithdrawDate
+                                          ExitWithdrawDate = o.exitWithdrawDate,
+                                          EntryDate = o.entryDate
                                       }).ToList();
             if (inputs != null)
             {
@@ -872,7 +873,7 @@ namespace EF2OR.Utils
 
             var staffResponse = await CommonUtils.ApiResponseProvider.GetApiData<StaffNS.Staffs>(ApiEndPoints.CsvUsersStaff) as StaffNS.Staffs;
             var staffResponseInfo = (from s in staffResponse.Property1
-                                     //let mainTelephone = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault(x => x.orderOfPriority == "1")
+                                         //let mainTelephone = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault(x => x.orderOfPriority == "1")
                                      let mainTelephone = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault()
                                      let mainTelephoneNumber = mainTelephone == null ? "" : mainTelephone.telephoneNumber
                                      let emailAddress = (s.electronicMails == null || s.electronicMails.Count() == 0) ? "" : s.electronicMails[0].electronicMailAddress //TODO: just pick 0?.  or get based on electronicMailType field.
@@ -890,7 +891,7 @@ namespace EF2OR.Utils
                                          sms = mobileNumber,
                                          phone = mainTelephoneNumber,
                                          username = s.loginId
-                                         
+
                                      }).ToList();
 
             //var studentInfo = (from e in enrollmentsList
@@ -937,14 +938,64 @@ namespace EF2OR.Utils
                                  phone = si.phone,
                                  username = si.username
                              }).ToList();
-            //var parentResponse = await CommonUtils.ApiResponseProvider.GetApiData<ParentsNS.Parents>(ApiEndPoints.CsvUsersParents) as ParentsNS.Parents;
+            var studPrntAssoResponse = await CommonUtils.ApiResponseProvider.GetApiData<StudentParentAssociationNS.StudentParentAssociation>(ApiEndPoints.CsvStudPrntAsction) as StudentParentAssociationNS.StudentParentAssociation;
+            var studPrntAssoInfo = (from o in studPrntAssoResponse.Property1
+                                    select new
+                                    {
+                                        StudetUniqueId = o.studentReference.studentUniqueId,
+                                        parentId = o.parentReference.parentUniqueId
+                                        //SchoolId=o.parentReference.s
+                                    }).ToList();
 
-            var distinctStudents = studentInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First());
+            var parentResponse = await CommonUtils.ApiResponseProvider.GetApiData<ParentNS.Parents>(ApiEndPoints.CsvUsersParents) as ParentNS.Parents;
+            var parentResponseInfo = (from s in parentResponse.Property1 
+                                      let mainTelephone = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault()
+                                      let mainTelephoneNumber = mainTelephone == null ? "" : (string)mainTelephone.telephoneNumber
+                                      let emailAddress = (s.electronicMails == null || s.electronicMails.Count() == 0) ? "" : (string)s.electronicMails[0].electronicMailAddress 
+                                      let mobile = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault(x => (string)x.telephoneNumberType == "Mobile")
+                                      let mobileNumber = mobile == null ? "" : mobile.telephoneNumber
+                                      select new
+                                      {
+                                          id = s.id,
+                                          userId = s.ParentUniqueId,
+                                          givenName = s.firstName,
+                                          familyName = s.lastSurname,
+                                          middleName = s.middleName,
+                                          identifier = s.ParentUniqueId,
+                                          email = emailAddress,
+                                          sms = mobileNumber,
+                                          phone = mainTelephoneNumber,
+                                          username = s.ParentUniqueId,
+                                          grade = ""
+                                      }).ToList();
+
+            var parentInfo = (from pr in studPrntAssoInfo
+                              from si in parentResponseInfo.Where(x => x.userId == pr.parentId)
+                              from sii in studentInfo.Where(x => x.userId== pr.StudetUniqueId)
+                              select new CsvUsers
+                                    {
+                                  sourcedId = si.id,
+                                  orgSourcedIds = sii.SchoolId,
+                                  enabledUser = "TRUE",
+                                  role = "Parent",
+                                  userId = si.userId,
+                                  givenName = si.givenName,
+                                  familyName = si.familyName,
+                                  middleNames = si.middleName,
+                                  identifier = si.identifier,
+                                  email = si.email,
+                                  sms = si.sms,
+                                  phone = si.phone,
+                                  username = si.username
+                              }).ToList();
+           
+            var distinctStudents = studentInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First()).ToList();
             var distinctStaff = staffInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First());
+            var distinctParent = parentInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First()).ToList();
 
-            var studentsAndStaff = distinctStudents.Concat(distinctStaff);
-
-            return studentsAndStaff.ToList();
+            var studentsAndStaff = distinctStudents.Concat(distinctStaff).ToList();
+            var studentsAndStaffParent = studentsAndStaff.Concat(distinctParent).ToList();
+            return studentsAndStaffParent.ToList();
         }
 
         internal static async Task<List<CsvCourses>> GetCsvCourses(FilterInputs inputs)
