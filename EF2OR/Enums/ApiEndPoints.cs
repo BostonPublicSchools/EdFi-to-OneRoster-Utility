@@ -25,6 +25,7 @@
         public const string CsvUsersStaff = "staffs";
         public const string CsvUsers = "enrollment/sections";
         public const string CsvCourses = "enrollment/sections";
+        public const string CsvCourseOffering = "courseOfferings";
         public const string CsvClasses = "enrollment/sections";
         public const string CsvEnrollments = "enrollment/sections";
         public const string CsvAcademicSessions = "enrollment/sections";

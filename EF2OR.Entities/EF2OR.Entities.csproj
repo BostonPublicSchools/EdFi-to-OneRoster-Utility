@@ -46,6 +46,7 @@
     <Compile Include="EdFiOdsApi\Enrollment\SectionEnrollments\SectionEnrollments.cs" />
     <Compile Include="EdFiOdsApi\Enrollment\Staffs\Staffs.cs" />
     <Compile Include="EdFiOdsApi\Enrollment\Students\Students.cs" />
+    <Compile Include="EdFiOdsApi\Resourses\CourseOffering\CourseOffering.cs" />
     <Compile Include="EdFiOdsApi\Resourses\Parent\Parent.cs" />
     <Compile Include="EdFiOdsApi\Resourses\StudentParentAssociation\StudentParentAssociation.cs" />
     <Compile Include="EdFiOdsApi\Resourses\StudentSchoolAssociation\StudentSchoolAssociation.cs" />

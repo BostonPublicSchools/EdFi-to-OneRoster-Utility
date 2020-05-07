@@ -22,6 +22,7 @@ using ParentNS = EF2OR.Entities.EdFiOdsApi.Resourses.Parent;
 using StudentParentAssociationNS = EF2OR.Entities.EdFiOdsApi.Resourses.StudentParentAssociation;
 using StudentSchoolAssociationNS = EF2OR.Entities.EdFiOdsApi.Resourses.StudentSchoolAssociation;
 using StudentSectionAssociationNS = EF2OR.Entities.EdFiOdsApi.Resourses.StudentSectionAssociation;
+using CourseOfferingNS = EF2OR.Entities.EdFiOdsApi.Resourses.CourseOffering;
 
 namespace EF2OR.Utils
 {
@@ -29,6 +30,10 @@ namespace EF2OR.Utils
     {
         #region Variables
         private static readonly ApplicationDbContext db = new ApplicationDbContext();
+
+
+        private static List<CsvUsers> _staffList;
+        private static List<CsvUsers> _studList;
         static ApiCalls()
         {
             Providers.ApiResponseProvider.db = ApiCalls.db;
@@ -993,6 +998,9 @@ namespace EF2OR.Utils
             var distinctStaff = staffInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First());
             var distinctParent = parentInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First()).ToList();
 
+            //_staffList = distinctStaff.ToList();
+            //_staffList = distinctStudents.ToList();
+
             var studentsAndStaff = distinctStudents.Concat(distinctStaff).ToList();
             var studentsAndStaffParent = studentsAndStaff.Concat(distinctParent).ToList();
             return studentsAndStaffParent.ToList();
@@ -1000,25 +1008,46 @@ namespace EF2OR.Utils
 
         internal static async Task<List<CsvCourses>> GetCsvCourses(FilterInputs inputs)
         {
-            var responseArray = await CommonUtils.ApiResponseProvider.GetApiData<SectionsNS.Sections>(ApiEndPoints.CsvCourses) as SectionsNS.Sections;
+            //var responseArray = await CommonUtils.ApiResponseProvider.GetApiData<SectionsNS.Sections>(ApiEndPoints.CsvCourses) as SectionsNS.Sections;
+            //var enrollmentsList = (from o in responseArray.Property1
+            //                       let teachers = o.staff.Select(x => x.id)
+            //                       select new CsvCourses
+            //                       {
+            //                           sourcedId = o.courseOfferingReference.id,
+            //                           schoolYearId = o.sessionReference.id,
+            //                           title = o.courseOfferingReference.localCourseCode,
+            //                           courseCode = o.courseOfferingReference.localCourseCode,
+            //                           orgSourcedId = o.schoolReference.id,
+            //                           subjects = o.academicSubjectDescriptor,
+            //                           SchoolId = o.schoolReference.id,
+            //                           SchoolYear = Convert.ToString(o.courseOfferingReference.schoolYear),
+            //                           //Term = o.courseOfferingReference.termDescriptor,
+            //                           //Subject = o.academicSubjectDescriptor,
+            //                           //Course = o.courseOfferingReference.localCourseCode,
+            //                           Section = o.uniqueSectionCode,
+            //                           Teachers = teachers
+            //                       }).ToList();
+
+            var responseArray = await CommonUtils.ApiResponseProvider.GetApiData<CourseOfferingNS.CourseOffering>(ApiEndPoints.CsvCourseOffering) as CourseOfferingNS.CourseOffering;
             var enrollmentsList = (from o in responseArray.Property1
-                                   let teachers = o.staff.Select(x => x.id)
+                                   //let teachers = o.staff.Select(x => x.id)
                                    select new CsvCourses
                                    {
-                                       sourcedId = o.courseOfferingReference.id,
-                                       schoolYearId = o.sessionReference.id,
-                                       title = o.courseOfferingReference.localCourseCode,
-                                       courseCode = o.courseOfferingReference.localCourseCode,
-                                       orgSourcedId = o.schoolReference.id,
-                                       subjects = o.academicSubjectDescriptor,
-                                       SchoolId = o.schoolReference.id,
-                                       SchoolYear = Convert.ToString(o.courseOfferingReference.schoolYear),
+                                       sourcedId = o.id,
+                                       schoolYearId = o.sessionreference.schoolYear,
+                                       title = o.sessionreference.schoolYear,
+                                       courseCode = o.localCourseCode,
+                                       orgSourcedId = o.schoolReference.schoolId,
+                                       subjects = o.sessionreference.schoolYear,
+                                       SchoolId = o.schoolReference.schoolId,
+                                       SchoolYear = Convert.ToString(o.sessionreference.schoolYear),
                                        //Term = o.courseOfferingReference.termDescriptor,
                                        //Subject = o.academicSubjectDescriptor,
                                        //Course = o.courseOfferingReference.localCourseCode,
-                                       Section = o.uniqueSectionCode,
-                                       Teachers = teachers
+                                       Section = o.localCourseCode
+                                      // Teachers = teachers
                                    }).ToList();
+            
 
             if (inputs != null)
             {
@@ -1131,6 +1160,8 @@ namespace EF2OR.Utils
         {
             var responseArray = await CommonUtils.ApiResponseProvider.GetApiData<SectionsNS.Sections>(ApiEndPoints.CsvClasses) as SectionsNS.Sections;
             var enrollmentsList = (from o in responseArray.Property1
+                                       //let teachers = o.staff.Select(x => x.id)
+                                   let staffs = o.staff
                                    let teachers = o.staff.Select(x => x.id)
                                    select new CsvClasses
                                    {
@@ -1144,17 +1175,17 @@ namespace EF2OR.Utils
                                        subjects = o.academicSubjectDescriptor,
                                        SchoolId = o.schoolReference.id,
                                        SchoolYear = Convert.ToString(o.courseOfferingReference.schoolYear),
+                                       //ade =o
                                        //Term = o.courseOfferingReference.termDescriptor,
                                        //Subject = o.academicSubjectDescriptor,
                                        //Course = o.courseOfferingReference.localCourseCode,
                                        Section = o.uniqueSectionCode,
                                        Teachers = teachers
-                                   });
-
+                                   }).ToList();
             if (inputs != null)
             {
                 if (inputs.Schools != null)
-                    enrollmentsList = enrollmentsList.Where(x => inputs.Schools.Contains(x.SchoolId));
+                    enrollmentsList = enrollmentsList.Where(x => inputs.Schools.Contains(x.SchoolId)).ToList();
 
                 if (inputs.SchoolYears != null)
                     enrollmentsList = enrollmentsList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
@@ -1290,7 +1321,7 @@ namespace EF2OR.Utils
             }
 
             var studentInfo = (from e in enrollmentsList
-                               from s in e.students
+                                   from s in e.students
                                select new CsvEnrollments
                                {
                                    sourcedId = s.studentSectionAssociation_id,
@@ -1301,7 +1332,7 @@ namespace EF2OR.Utils
                                }).ToList();
 
             var staffInfo = (from e in enrollmentsList
-                             from s in e.staffs
+                                 from s in e.staffs
                              select new CsvEnrollments
                              {
                                  sourcedId = (string)s.staffSectionAssociation_id,

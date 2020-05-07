@@ -22,6 +22,7 @@ using ParentNS = EF2OR.Entities.EdFiOdsApi.Resourses.Parent;
 using StudentParentAssociationNS = EF2OR.Entities.EdFiOdsApi.Resourses.StudentParentAssociation;
 using StudentSchoolAssociationNS = EF2OR.Entities.EdFiOdsApi.Resourses.StudentSchoolAssociation;
 using StudentSectionAssociationNS = EF2OR.Entities.EdFiOdsApi.Resourses.StudentSectionAssociation;
+using CourseOfferingNS = EF2OR.Entities.EdFiOdsApi.Resourses.CourseOffering;
 
 namespace EF2OR.Providers
 {
@@ -409,6 +410,14 @@ namespace EF2OR.Providers
                             {
                                 var tResult = Newtonsoft.Json.JsonConvert.DeserializeObject<StudentParentAssociationNS.Class1[]>(responseJson);
                                 entityToInsert = new StudentParentAssociationNS.StudentParentAssociation()
+                                {
+                                    Property1 = tResult
+                                };
+                            }
+                            if (entityType == typeof(CourseOfferingNS.CourseOffering))
+                            {
+                                var tResult = Newtonsoft.Json.JsonConvert.DeserializeObject<CourseOfferingNS.Class1[]>(responseJson);
+                                entityToInsert = new CourseOfferingNS.CourseOffering()
                                 {
                                     Property1 = tResult
                                 };
