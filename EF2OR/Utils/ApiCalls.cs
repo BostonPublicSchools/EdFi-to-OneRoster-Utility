@@ -680,7 +680,6 @@ namespace EF2OR.Utils
         private static async Task<List<CsvOrgs>> GetCsvOrgs(FilterInputs inputs)
         {
             var responseArray = await CommonUtils.ApiResponseProvider.GetApiData<SchoolsNS.Schools>(ApiEndPoints.CsvOrgs) as SchoolsNS.Schools;
-
             var context = new ApplicationDbContext();
             var identifierSetting = context.ApplicationSettings.FirstOrDefault(x => x.SettingName == ApplicationSettingsTypes.OrgsIdentifier)?.SettingValue;
             bool blankIdentifier = identifierSetting == null || identifierSetting == OrgIdentifierSettings.blank;
@@ -779,10 +778,6 @@ namespace EF2OR.Utils
                                    let students = o.students.Select(x => x.id)
                                    let staffs = o.staff.Select(x => x)
                                    let teachers = o.staff.Select(x => x.id)
-                                   //where inputs.Schools.Contains(o.schoolReference.id)
-                                   //let students = o.students
-                                   //let staffs = o.staff
-                                   //let teachers = o.students
                                    select new
                                    {
                                        students = students,
@@ -799,7 +794,6 @@ namespace EF2OR.Utils
             if (inputs != null)
             {
                 if (inputs.Schools != null)
-                    //    //List<CsvUsers> sdhf= enrollmentsList.Select(x => inputs.Schools.Contains(x.SchoolId));
                     enrollmentsList = enrollmentsList.Where(x => inputs.Schools.Contains(x.SchoolId)).ToList();
 
                 //if (inputs.Sections != null)
@@ -812,36 +806,17 @@ namespace EF2OR.Utils
                     enrollmentsList = enrollmentsList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
             }
 
-            //var enrollmentsSecAssoctiResponse = await CommonUtils.ApiResponseProvider.GetApiData<StudentSectionAssociationNS.StudentSectionAssociation>(ApiEndPoints.CsvStudentSectionAssociation) as StudentSectionAssociationNS.StudentSectionAssociation;
-            //var enrollmentsSSAList = (from o in enrollmentsSecAssoctiResponse.Property1
-            //                       select new
-            //                       {
-            //                           StudetUniqueId = o.studentReference.studentUniqueId,
-            //                           SchoolId = o.sectionReference.schoolId,
-            //                           SchoolYear = o.sectionReference.schoolYear,
-            //                           BeginDate = o.beginDate,
-            //                           EndDate = o.endDate
-            //                       }).ToList();
-            //if (inputs != null)
-            //{
-            //    if (inputs.Schools != null)
-            //        enrollmentsSSAList = enrollmentsSSAList.Where(x => inputs.Schools.Contains(x.SchoolId)).ToList();
-            //    if (inputs.SchoolYears != null)
-            //        enrollmentsSSAList = enrollmentsSSAList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
-            //    enrollmentsSSAList = enrollmentsSSAList.Where(x => Convert.ToDateTime(x.EndDate) > DateTime.Now).ToList();
-            //}
-
-            var studentSchoolAssoctionResponse = await CommonUtils.ApiResponseProvider.GetApiData< StudentSchoolAssociationNS.StudentSchoolAssociation>(ApiEndPoints.CsvStudentSchoolAssociation) as StudentSchoolAssociationNS.StudentSchoolAssociation;
+            var studentSchoolAssoctionResponse = await CommonUtils.ApiResponseProvider.GetApiData<StudentSchoolAssociationNS.StudentSchoolAssociation>(ApiEndPoints.CsvStudentSchoolAssociation) as StudentSchoolAssociationNS.StudentSchoolAssociation;
             var studentSchoolAssoctionList = (from o in studentSchoolAssoctionResponse.Property1
-                                      select new
-                                      {
-                                          id=o.id,
-                                          StudetUniqueId = o.studentReference.studentUniqueId,
-                                          SchoolId = o.schoolReference.schoolId,
-                                          SchoolYear = o.schoolYearTypeReference.schoolYear,
-                                          ExitWithdrawDate = o.exitWithdrawDate,
-                                          EntryDate = o.entryDate
-                                      }).ToList();
+                                              select new
+                                              {
+                                                  id = o.id,
+                                                  StudetUniqueId = o.studentReference.studentUniqueId,
+                                                  SchoolId = o.schoolReference.schoolId,
+                                                  SchoolYear = o.schoolYearTypeReference.schoolYear,
+                                                  ExitWithdrawDate = o.exitWithdrawDate,
+                                                  EntryDate = o.entryDate
+                                              }).ToList();
             if (inputs != null)
             {
                 if (inputs.Schools != null)
@@ -899,11 +874,8 @@ namespace EF2OR.Utils
 
                                      }).ToList();
 
-            //var studentInfo = (from e in enrollmentsList
-            //                   from s in e.students
-            //                   from si in studentsResponseInfo.Where(x => x.id == s)
             var studentInfo = (from e in studentSchoolAssoctionList
-                               //from s in e.students
+                                   //from s in e.students
                                from si in studentsResponseInfo.Where(x => x.userId == e.StudetUniqueId)
                                    //from si in studentsResponseInfo.Where(x => x.id == s.id)
                                select new CsvUsers
@@ -953,10 +925,10 @@ namespace EF2OR.Utils
                                     }).ToList();
 
             var parentResponse = await CommonUtils.ApiResponseProvider.GetApiData<ParentNS.Parents>(ApiEndPoints.CsvUsersParents) as ParentNS.Parents;
-            var parentResponseInfo = (from s in parentResponse.Property1 
+            var parentResponseInfo = (from s in parentResponse.Property1
                                       let mainTelephone = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault()
                                       let mainTelephoneNumber = mainTelephone == null ? "" : (string)mainTelephone.telephoneNumber
-                                      let emailAddress = (s.electronicMails == null || s.electronicMails.Count() == 0) ? "" : (string)s.electronicMails[0].electronicMailAddress 
+                                      let emailAddress = (s.electronicMails == null || s.electronicMails.Count() == 0) ? "" : (string)s.electronicMails[0].electronicMailAddress
                                       let mobile = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault(x => (string)x.telephoneNumberType == "Mobile")
                                       let mobileNumber = mobile == null ? "" : mobile.telephoneNumber
                                       select new
@@ -976,9 +948,9 @@ namespace EF2OR.Utils
 
             var parentInfo = (from pr in studPrntAssoInfo
                               from si in parentResponseInfo.Where(x => x.userId == pr.parentId)
-                              from sii in studentInfo.Where(x => x.userId== pr.StudetUniqueId)
+                              from sii in studentInfo.Where(x => x.userId == pr.StudetUniqueId)
                               select new CsvUsers
-                                    {
+                              {
                                   sourcedId = si.id,
                                   orgSourcedIds = sii.SchoolId,
                                   enabledUser = "TRUE",
@@ -993,7 +965,7 @@ namespace EF2OR.Utils
                                   phone = si.phone,
                                   username = si.username
                               }).ToList();
-           
+
             var distinctStudents = studentInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First()).ToList();
             var distinctStaff = staffInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First());
             var distinctParent = parentInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First()).ToList();
@@ -1030,7 +1002,7 @@ namespace EF2OR.Utils
 
             var responseArray = await CommonUtils.ApiResponseProvider.GetApiData<CourseOfferingNS.CourseOffering>(ApiEndPoints.CsvCourseOffering) as CourseOfferingNS.CourseOffering;
             var enrollmentsList = (from o in responseArray.Property1
-                                   //let teachers = o.staff.Select(x => x.id)
+                                       //let teachers = o.staff.Select(x => x.id)
                                    select new CsvCourses
                                    {
                                        sourcedId = o.id,
@@ -1045,9 +1017,9 @@ namespace EF2OR.Utils
                                        //Subject = o.academicSubjectDescriptor,
                                        //Course = o.courseOfferingReference.localCourseCode,
                                        Section = o.localCourseCode
-                                      // Teachers = teachers
+                                       // Teachers = teachers
                                    }).ToList();
-            
+
 
             if (inputs != null)
             {
@@ -1321,7 +1293,7 @@ namespace EF2OR.Utils
             }
 
             var studentInfo = (from e in enrollmentsList
-                                   from s in e.students
+                               from s in e.students
                                select new CsvEnrollments
                                {
                                    sourcedId = s.studentSectionAssociation_id,
@@ -1332,7 +1304,7 @@ namespace EF2OR.Utils
                                }).ToList();
 
             var staffInfo = (from e in enrollmentsList
-                                 from s in e.staffs
+                             from s in e.staffs
                              select new CsvEnrollments
                              {
                                  sourcedId = (string)s.staffSectionAssociation_id,
