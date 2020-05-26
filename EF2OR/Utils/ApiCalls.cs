@@ -546,7 +546,7 @@ namespace EF2OR.Utils
             //Insert School Id Nos
             foreach (CsvOrgs s in dataResults.Orgs)
                 inputs.SchoolIds.Add(s.identifier);
-            dataResults.Users = await GetCsvUsers(inputs);
+            //dataResults.Users = await GetCsvUsers(inputs);
             dataResults.Courses = await GetCsvCourses(inputs);
             dataResults.Classes = await GetCsvClasses(inputs);
             dataResults.Enrollments = await GetCsvEnrollments(inputs);
@@ -1006,7 +1006,7 @@ namespace EF2OR.Utils
                                    {
                                        sourcedId = o.id,
                                        schoolYearId = o.sessionreference.schoolYear,
-                                       title = o.sessionreference.schoolYear,
+                                       title = o.localCourseTitle,
                                        courseCode = o.localCourseCode,
                                        orgSourcedId = o.schoolReference.schoolId,
                                        subjects = o.sessionreference.schoolYear,
@@ -1023,7 +1023,7 @@ namespace EF2OR.Utils
             if (inputs != null)
             {
                 if (inputs.Schools != null)
-                    enrollmentsList = enrollmentsList.Where(x => inputs.Schools.Contains(x.SchoolId)).ToList();
+                    enrollmentsList = enrollmentsList.Where(x => inputs.SchoolIds.Contains(x.SchoolId)).ToList();
 
                 if (inputs.SchoolYears != null)
                     enrollmentsList = enrollmentsList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
