@@ -37,6 +37,9 @@ namespace EF2OR.Entities.EdFiOdsApi.Enrollment.Students
         public Race[] races { get; set; }
         public Telephone[] telephones { get; set; }
         public Schoolassociation[] schoolAssociations { get; set; }
+        public string birthCity { get; set; }
+        public string birthCountryDescriptor { get; set; }
+        public string birthStateAbbreviationType { get; set; }
     }
 
     public class Address

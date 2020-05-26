@@ -30,7 +30,7 @@ namespace EF2OR.Entities.EdFiOdsApi.Enrollment.Staffs
         public Electronicmail[] electronicMails { get; set; }
         public Identificationcode[] identificationCodes { get; set; }
         public object[] languages { get; set; }
-        public object[] races { get; set; }
+        public Race[] races { get; set; }
         public Telephone[] telephones { get; set; }
         public Classification[] classifications { get; set; }
     }
@@ -58,6 +58,10 @@ namespace EF2OR.Entities.EdFiOdsApi.Enrollment.Staffs
     public class Classification
     {
         public string classification { get; set; }
+    }
+    public class Race
+    {
+        public string raceType { get; set; }
     }
 
 }

@@ -551,6 +551,8 @@ namespace EF2OR.Utils
             dataResults.Classes = await GetCsvClasses(inputs);
             dataResults.Enrollments = await GetCsvEnrollments(inputs);
             dataResults.AcademicSessions = await GetCsvAcademicSessions(inputs);
+            dataResults.Demographics = await GetCsvDemographics(inputs);
+
 
             //dataResults.Orgs = new List<CsvOrgs>();
             //dataResults.Courses = new List<CsvCourses>();
@@ -970,9 +972,6 @@ namespace EF2OR.Utils
             var distinctStaff = staffInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First());
             var distinctParent = parentInfo.GroupBy(x => new { x.sourcedId, x.SchoolId }).Select(group => group.First()).ToList();
 
-            //_staffList = distinctStaff.ToList();
-            //_staffList = distinctStudents.ToList();
-
             var studentsAndStaff = distinctStudents.Concat(distinctStaff).ToList();
             var studentsAndStaffParent = studentsAndStaff.Concat(distinctParent).ToList();
             return studentsAndStaffParent.ToList();
@@ -1050,6 +1049,171 @@ namespace EF2OR.Utils
             return enrollmentsList.ToList();
         }
 
+        private static async Task<List<CsvDemographics>> GetCsvDemographics(FilterInputs inputs)
+        {
+            var enrollmentsResponse = await CommonUtils.ApiResponseProvider.GetApiData<SectionsNS.Sections>(ApiEndPoints.CsvUsers) as SectionsNS.Sections;
+            var enrollmentsList = (from o in enrollmentsResponse.Property1
+                                   let students = o.students.Select(x => x.id)
+                                   let staffs = o.staff.Select(x => x)
+                                   let teachers = o.staff.Select(x => x.id)
+                                   select new
+                                   {
+                                       students = students,
+                                       staffs = staffs,
+                                       SchoolId = o.schoolReference.id,
+                                       SchoolYear = Convert.ToString(o.courseOfferingReference.schoolYear),
+                                       //Term = o.courseOfferingReference.termDescriptor,
+                                       //Subject = o.academicSubjectDescriptor,
+                                       //Course = o.courseOfferingReference.localCourseCode,
+                                       Section = o.uniqueSectionCode,
+                                       Teachers = teachers
+                                   }).ToList();
+
+            if (inputs != null)
+            {
+                if (inputs.Schools != null)
+                    enrollmentsList = enrollmentsList.Where(x => inputs.Schools.Contains(x.SchoolId)).ToList();
+                //if (inputs.Sections != null)
+                //    enrollmentsList = enrollmentsList.Where(x => inputs.Sections.Contains(x.Section)).ToList();
+                if (inputs.Teachers != null)
+                    enrollmentsList = enrollmentsList.Where(x => x.Teachers.Intersect(inputs.Teachers).Any()).ToList();
+                if (inputs.SchoolYears != null)
+                    enrollmentsList = enrollmentsList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
+            }
+
+            var studentSchoolAssoctionResponse = await CommonUtils.ApiResponseProvider.GetApiData<StudentSchoolAssociationNS.StudentSchoolAssociation>(ApiEndPoints.CsvStudentSchoolAssociation) as StudentSchoolAssociationNS.StudentSchoolAssociation;
+            var studentSchoolAssoctionList = (from o in studentSchoolAssoctionResponse.Property1
+                                              select new
+                                              {
+                                                  id = o.id,
+                                                  StudetUniqueId = o.studentReference.studentUniqueId,
+                                                  SchoolId = o.schoolReference.schoolId,
+                                                  SchoolYear = o.schoolYearTypeReference.schoolYear,
+                                                  ExitWithdrawDate = o.exitWithdrawDate,
+                                                  EntryDate = o.entryDate
+                                              }).ToList();
+            if (inputs != null)
+            {
+                if (inputs.Schools != null)
+                    studentSchoolAssoctionList = studentSchoolAssoctionList.Where(x => inputs.SchoolIds.Contains(x.SchoolId)).ToList();
+                if (inputs.SchoolYears != null)
+                    studentSchoolAssoctionList = studentSchoolAssoctionList.Where(x => inputs.SchoolYears.Contains(x.SchoolYear)).ToList();
+                studentSchoolAssoctionList = studentSchoolAssoctionList.Where(x => string.IsNullOrEmpty(x.ExitWithdrawDate)).ToList();
+            }
+
+            var studentsResponse = await CommonUtils.ApiResponseProvider.GetApiData<StudentsNS.Students>(ApiEndPoints.CsvUsersStudents) as StudentsNS.Students;
+            var studentsResponseInfo = (from s in studentsResponse.Property1 
+                                        let mainTelephone = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault()
+                                        let mainTelephoneNumber = mainTelephone == null ? "" : (string)mainTelephone.telephoneNumber
+                                        let emailAddress = (s.electronicMails == null || s.electronicMails.Count() == 0) ? "" : (string)s.electronicMails[0].electronicMailAddress //TODO: just pick 0?.  or get based on electronicMailType field.
+                                        let mobile = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault(x => (string)x.telephoneNumberType == "Mobile")
+                                        let mobileNumber = mobile == null ? "" : mobile.telephoneNumber
+                                        select new
+                                        {
+                                            id = s.id,
+                                            userId = s.studentUniqueId,
+                                            givenName = s.firstName,
+                                            familyName = s.lastSurname,
+                                            middleName = s.middleName,
+                                            identifier = s.studentUniqueId,
+                                            email = emailAddress,
+                                            sms = mobileNumber,
+                                            phone = mainTelephoneNumber,
+                                            username = s.loginId,
+                                            //grade = s.schoolAssociations.FirstOrDefault().gradeLevel
+                                            grade = GetHighestGrade(s.schoolAssociations),//Get highest Grade 
+                                            sex = s.sexType,
+                                            american = s.races.ToList().Any(race=>race.raceType== "Asian")?"True":"False",// s.races.Contains(new StudentsNS.Race().raceType="Asian")?"Tue":"False",
+                                            asian = s.races.ToList().Any(race => race.raceType == "Asian") ? "True" : "False",
+                                            blackOrAfricanAmerican = s.races.ToList().Any(race => race.raceType == "Black - African American") ? "True" : "False",
+                                            nativeHawaiianOrOtherPacificIslander = "",
+                                            white = s.races.ToList().Any(race => race.raceType == "White") ? "True" : "False",
+                                            demographicRaceTwoOrMoreRaces = (s.races.ToList().Count>1)?"True":"False",
+                                            hispanicOrLatinoEthnicity = s.hispanicLatinoEthnicity,
+                                            countryOfBirthCode = s.birthCountryDescriptor,
+                                            stateOfBirthAbbreviation = s.birthStateAbbreviationType,
+                                            cityOfBirth = s.birthCity,
+                                            publicSchoolResidenceStatus = ""
+                                        }).ToList();
+
+            var staffResponse = await CommonUtils.ApiResponseProvider.GetApiData<StaffNS.Staffs>(ApiEndPoints.CsvUsersStaff) as StaffNS.Staffs;
+            var staffResponseInfo = (from s in staffResponse.Property1
+                                     let mainTelephone = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault()
+                                     let mainTelephoneNumber = mainTelephone == null ? "" : mainTelephone.telephoneNumber
+                                     let emailAddress = (s.electronicMails == null || s.electronicMails.Count() == 0) ? "" : s.electronicMails[0].electronicMailAddress //TODO: just pick 0?.  or get based on electronicMailType field.
+                                     let mobile = (s.telephones == null || s.telephones.Count() == 0) ? null : s.telephones.FirstOrDefault(x => x.telephoneNumberType == "Mobile")
+                                     let mobileNumber = mobile == null ? "" : mobile.telephoneNumber
+                                     select new
+                                     {
+                                         id = s.id,
+                                         userId = s.staffUniqueId,
+                                         givenName = s.firstName,
+                                         familyName = s.lastSurname,
+                                         middleName = s.middleName,
+                                         identifier = s.staffUniqueId,
+                                         email = emailAddress,
+                                         sms = mobileNumber,
+                                         phone = mainTelephoneNumber,
+                                         username = s.loginId,
+                                         sex = s.sexType,
+                                         american = s.races.ToList().Any(race => race.raceType == "Asian") ? "True" : "False",// s.races.Contains(new StudentsNS.Race().raceType="Asian")?"Tue":"False",
+                                         asian = s.races.ToList().Any(race => race.raceType == "Asian") ? "True" : "False",
+                                         blackOrAfricanAmerican = s.races.ToList().Any(race => race.raceType == "Black - African American") ? "True" : "False",
+                                         nativeHawaiianOrOtherPacificIslander = "",
+                                         white = s.races.ToList().Any(race => race.raceType == "White") ? "True" : "False",
+                                         demographicRaceTwoOrMoreRaces = (s.races.ToList().Count > 1) ? "True" : "False",
+                                         hispanicOrLatinoEthnicity = s.hispanicLatinoEthnicity,
+                                         countryOfBirthCode = "",
+                                         stateOfBirthAbbreviation = "",
+                                         cityOfBirth = "",
+                                         publicSchoolResidenceStatus = ""
+                                     }).ToList();
+
+            var studentInfo = (from e in studentSchoolAssoctionList
+                               from si in studentsResponseInfo.Where(x => x.userId == e.StudetUniqueId)
+                               select new CsvDemographics
+                               {
+                                   sourcedId = si.id,
+                                   status="",
+                                   sex = si.sex,
+                                   americanIndianOrAlaskaNative = si.american,
+                                   asian = si.asian,
+                                   blackOrAfricanAmerican = si.blackOrAfricanAmerican,
+                                   nativeHawaiianOrOtherPacificIslander = si.nativeHawaiianOrOtherPacificIslander,
+                                   white = si.white,
+                                   demographicRaceTwoOrMoreRaces = si.demographicRaceTwoOrMoreRaces,
+                                   hispanicOrLatinoEthnicity = si.hispanicOrLatinoEthnicity,
+                                   countryOfBirthCode = si.countryOfBirthCode,
+                                   stateOfBirthAbbreviation = si.stateOfBirthAbbreviation,
+                                   cityOfBirth = si.cityOfBirth,
+                                   publicSchoolResidenceStatus = ""
+                               }).ToList();
+
+            var staffInfo = (from e in enrollmentsList
+                             from s in e.staffs
+                             from si in staffResponseInfo.Where(x => x.id == s.id)
+                             select new CsvDemographics
+                             {
+                                 sourcedId = s.id,
+                                 sex = si.sex,
+                                 americanIndianOrAlaskaNative = si.american,
+                                 asian = si.asian,
+                                 blackOrAfricanAmerican = si.blackOrAfricanAmerican,
+                                 nativeHawaiianOrOtherPacificIslander = si.nativeHawaiianOrOtherPacificIslander,
+                                 white = si.white,
+                                 demographicRaceTwoOrMoreRaces = si.demographicRaceTwoOrMoreRaces,
+                                 hispanicOrLatinoEthnicity = si.hispanicOrLatinoEthnicity?"True":"False", //
+                                 countryOfBirthCode = si.countryOfBirthCode,
+                                 stateOfBirthAbbreviation = si.stateOfBirthAbbreviation,
+                                 cityOfBirth = si.cityOfBirth,
+                                 publicSchoolResidenceStatus = ""
+                             }).ToList();
+
+            var distinctStudents = studentInfo.GroupBy(x => new { x.sourcedId }).Select(group => group.First()).ToList();
+            var distinctStaff = staffInfo.GroupBy(x => new { x.sourcedId }).Select(group => group.First());
+            var studentsAndStaff = distinctStudents.Concat(distinctStaff).ToList();
+            return studentsAndStaff.ToList();
+        }
 
         private static async Task<PagedDataResults> GetPagedCourses(FilterInputs inputs, int pageNumber)
         {
