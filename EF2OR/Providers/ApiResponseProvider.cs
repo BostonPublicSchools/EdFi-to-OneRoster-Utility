@@ -569,6 +569,12 @@ namespace EF2OR.Providers
                     var tResult = result as ParentNS.Parents;
                     tResult.Property1 = termDescriptorsResult.SelectMany(p => p.Property1).ToArray();
                 }
+                if (typeof(T) == typeof(CourseOfferingNS.CourseOffering))
+                {
+                    var termDescriptorsResult = lstJsonResponses.Cast<CourseOfferingNS.CourseOffering>();
+                    var tResult = result as CourseOfferingNS.CourseOffering;
+                    tResult.Property1 = termDescriptorsResult.SelectMany(p => p.Property1).ToArray();
+                }
             }
             catch (Exception ex)
             {
